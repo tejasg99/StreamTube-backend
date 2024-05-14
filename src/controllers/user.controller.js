@@ -16,7 +16,7 @@ const registerUser = asyncHandler( async (req, res) => {
     // return response properly if not then error
 
     const {fullname, email, username, password} = req.body
-    console.log("email: ", email);
+    // console.log("email: ", email);
 
     // Some method returns a boolean value 
     // Here if it returns a true value then will proceed to the if block and throw an error
@@ -27,16 +27,23 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     // find if user exists using database query
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{ username },{ email }]
     })
     if(existedUser){
         throw new ApiError(409, "User with email or username already exists")
     }
 
+    // console.log(req.files);
+
     // images
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+        coverImageLocalPath = req.files.coverImage[0].path;
+    }
 
     if(!avatarLocalPath){
         throw new ApiError(400, "Avatar file is required")
