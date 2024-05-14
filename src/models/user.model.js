@@ -54,7 +54,7 @@ userSchema.pre("save",async function(next){
     // If field not modified then move on to the next
     if(!this.isModified("password")) return next();
     // If modified then encrypt
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
 })
 
