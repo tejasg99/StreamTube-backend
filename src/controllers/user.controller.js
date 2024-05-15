@@ -4,6 +4,23 @@ import { User } from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/apiResponse.js";
 
+// AT and RT separate method
+const generateAccessAndRefreshTokens = async(userId) => {
+    try {
+       const user =  await User.findById(userId)
+       const accessToken = user.generateAccessToken()
+       const refreshToken =  user.generateRefreshToken()
+
+      // adding refreshToken to database    
+       user.refreshToken = refreshToken
+       await user.save({ validateBeforeSave: false })
+
+       return {accessToken, refreshToken}
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong while generating access and refresh token")
+    }
+}
+
 const registerUser = asyncHandler( async (req, res) => {
     // get user details from frontend 
     // Validation - not empty
@@ -84,6 +101,95 @@ const registerUser = asyncHandler( async (req, res) => {
     )
 })
 
+const loginUser = asyncHandler( async (req, res) => {
+    // Todos
+    // req.body - take data 
+    // Authentication using username or email
+    // find the user and check password if user exists
+    // access and refresh Token generation and 
+    // send to user in cookies
+    // Response - login successful
+
+    const {email, username, password} = req.body;
+
+    if(!username || !email){
+        throw new ApiError(400, "username or email is required")
+    }
+
+    // find user in db
+    const user = await User.findOne({
+        // mongoDB operator 
+        $or: [{username}, {email}]
+    })
+
+    if(!user){
+        throw new ApiError(404, "User does not exist")
+    }
+
+    // password check
+    const isPasswordValid = await user.isPasswordCorrect(password)
+
+    if(!isPasswordValid){
+        throw new ApiError(401, "Incorrect Password")
+    }
+
+    // AT and RT
+    const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
+
+    // Check if one more db query is expensive if yes then just update the user from previous query
+    const loggedInUser = await User.findById(user._id).select("-password", "-refreshToken")
+
+    // cookies
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToekn", refreshToken, options)
+    .json(
+        new ApiResponse(
+            200, //statusCode
+            {
+                user: loggedInUser, accessToken, refreshToken
+            }, //data
+            "User logged in successfully" //message
+        )
+    )
+})
+
+const logoutUser = asyncHandler(async(req, res) => {
+    // auth middleware to get user access from req
+    // find user and reset refeshToken
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true
+        }
+    )
+    
+    // clear cookies
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out successfully"))
+
+})
+
 export {
     registerUser,
+    loginUser,
+    logoutUser
 }
