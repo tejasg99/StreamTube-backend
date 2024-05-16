@@ -3,6 +3,7 @@ import { ApiError } from "../utils/apiError.js"
 import { User } from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/apiResponse.js";
+import  jwt  from "jsonwebtoken"
 
 // AT and RT separate method
 const generateAccessAndRefreshTokens = async(userId) => {
@@ -85,7 +86,7 @@ const registerUser = asyncHandler( async (req, res) => {
     })
 
     // remove password and refreshToken from response
-    // .select method excludes "-name/element"
+    // .select method excludes "-name/element" and it only takes one argument like "-password refreshToken" no comma in between two args
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
@@ -112,9 +113,13 @@ const loginUser = asyncHandler( async (req, res) => {
 
     const {email, username, password} = req.body;
 
-    if(!username || !email){
+    if(!username && !email) {
         throw new ApiError(400, "username or email is required")
     }
+    //Alternative
+    // if(!(username || email)){
+    //     throw new ApiError(400, "username or email is required")
+    // }
 
     // find user in db
     const user = await User.findOne({
@@ -137,7 +142,7 @@ const loginUser = asyncHandler( async (req, res) => {
     const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
     // Check if one more db query is expensive if yes then just update the user from previous query
-    const loggedInUser = await User.findById(user._id).select("-password", "-refreshToken")
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
     // cookies
     const options = {
@@ -148,7 +153,7 @@ const loginUser = asyncHandler( async (req, res) => {
     return res
     .status(200)
     .cookie("accessToken", accessToken, options)
-    .cookie("refreshToekn", refreshToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(
         new ApiResponse(
             200, //statusCode
@@ -166,8 +171,8 @@ const logoutUser = asyncHandler(async(req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1 // this removes the field from document
             }
         },
         {
@@ -188,8 +193,56 @@ const logoutUser = asyncHandler(async(req, res) => {
 
 })
 
+const refreshAccessToken = asyncHandler(async(req,res) => {
+    // Access using cookies
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+    if(!incomingRefreshToken) {
+        throw new ApiError(401, "Unauthorized request")
+    }
+
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken, 
+            process.env.REFRESH_TOKEN_SECRET
+        )
+    
+        const user = await User.findById(decodedToken?._id)
+    
+        if(!user) {
+            throw new ApiError(401, "Invalid refresh token")
+        }
+    
+        if(incomingRefreshToken !== user?.refreshToken){
+            throw new ApiError(401, "Refresh Token is expired or used")
+        }
+    
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+    
+        const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
+    
+        return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", newRefreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {accessToken, refreshToken: newRefreshToken},
+                "Access Token refreshed"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(401, error?.message || "Invalid refresh token")
+    }
+})
+
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }
