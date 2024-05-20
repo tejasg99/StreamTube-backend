@@ -370,7 +370,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         },
         {
             $lookup: {
-                from: "subscriptions",
+                from: "subscriptions", //as everything becomes lowercase and plural in models
                 localField: "_id",
                 foreignField: "channel",
                 as: "subscribers"
@@ -384,10 +384,10 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 as: "subscribedTo"
             }
         },
-        {
+        { //to add these fields together
             $addFields: {
                 subscribersCount: {
-                    $size: "$subscribers"
+                    $size: "$subscribers" //$ prefix as subscribers is a field now
                 },
                 channelsSubscribedToCount: {
                     $size: "$subscribedTo"
@@ -401,7 +401,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 }
             }
         },
-        {
+        { //to pass only selected values 
            $project: {
             fullname: 1,
             username: 1,
