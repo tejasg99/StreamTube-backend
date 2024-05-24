@@ -15,6 +15,35 @@ const getAllVideos = asyncHandler(async (req, res) => {
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description} = req.body
     // TODO: get video, upload to cloudinary, create video
+
+    // get file path
+    const videoLocalPath = req.files?.videoFile[0]?.path
+    const thumbnailLocalPath = req.files?.thumbnail[0].path
+    console.log("Video Path: ",videoLocalPath," Thumbnail Path: ", thumbnailLocalPath)
+    if(!title || !description || !videoLocalPath || !thumbnailLocalPath){
+        throw new ApiError(400, "Title, Description, VideoFile and Thumbnail are required")
+    }
+
+    // Upload to cloudinary
+    const video = await uploadOnCloudinary(videoLocalPath)
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+
+    // Create video object
+    const newVideo = await Video.create({
+        title,
+        description,
+        thumbnail: thumbnail.url,
+        videoFile: video.url,
+        owner: req.user._id,
+    })
+
+    // Yet to get video duration from cloudinary 
+    // Testing to be done
+
+    return res
+    .status(201)
+    .json(new ApiResponse(201, newVideo, "Video uploaded successfully"))
+
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
