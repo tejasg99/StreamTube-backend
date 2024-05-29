@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { User } from "../models/user.model.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {deleteImageFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/apiResponse.js";
 import  jwt  from "jsonwebtoken"
 import mongoose from "mongoose";
@@ -296,12 +296,13 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
 const updateUserAvatar = asyncHandler(async(req, res) => {
     // get avatar using multer middleware
     const avatarLocalPath = req.file?.path
+    const existingAvatar = req.user?.avatar
 
     if(!avatarLocalPath){
         throw new ApiError(400, "Avatar file is missing")
     }
 
-    // Todo delete old image after new uploaded
+    
 
     // upload
     const avatar = await uploadOnCloudinary(avatarLocalPath) 
@@ -309,6 +310,9 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
     if(!avatar.url){
         throw new ApiError(400, "Error while uploading avatar")
     }
+
+    // Todo delete old image after new uploaded
+    await deleteImageFromCloudinary(existingAvatar)
 
     // update db
     const user = await User.findByIdAndUpdate(
@@ -329,6 +333,7 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
 const updateUserCoverImage = asyncHandler(async(req, res) => {
     // get coverImage using multer middleware
     const coverImageLocalPath = req.file?.path
+    const existingCoverImage = req.user?.coverImage
 
     if(!coverImageLocalPath){
         throw new ApiError(400, "Cover Image file is missing")
@@ -339,6 +344,9 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
     if(!coverImage.url){
         throw new ApiError(400, "Error while uploading coverImage")
     }
+
+    // Delete existing coverImage
+    await deleteImageFromCloudinary(existingCoverImage)
 
     // update db
     const user = await User.findByIdAndUpdate(
