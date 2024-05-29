@@ -38,9 +38,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
         duration: video.duration, //Get duration from cloudinary
     })
 
-    // Yet to get video duration from cloudinary 
-    // Testing to be done
-
     return res
     .status(201)
     .json(new ApiResponse(201, newVideo, "Video uploaded successfully"))
@@ -50,12 +47,29 @@ const publishAVideo = asyncHandler(async (req, res) => {
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
+    if(!mongoose.isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid Video Id")
+    }
+    // Need to incorporate aggregation pipeline to fetch likes, comments, etc
+    const video = await Video.findById(videoId)
+
+    if(!video){
+        throw new ApiError(404, "Video not found")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, video, "Video fetched successfully"))
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
+    const {title, description, thumbnail} = req.body
 
+    if(!mongoose.isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid Video Id")
+    }
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
