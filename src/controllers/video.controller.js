@@ -4,7 +4,7 @@ import {User} from "../models/user.model.js"
 import {ApiError} from "../utils/apiError.js"
 import {ApiResponse} from "../utils/apiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {deleteImageFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -50,7 +50,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video Id")
     }
-    // Need to incorporate aggregation pipeline to fetch likes, comments, etc
+    // Aggregation pipeline to fetch likes, comments, etc
     const video = await Video.aggregate([
         {
             $match: {
@@ -166,11 +166,54 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
-    const {title, description, thumbnail} = req.body
 
     if(!mongoose.isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video Id")
     }
+
+    const {title, description} = req.body
+
+    if (!title || !description) {
+        throw new ApiError(400, "title and description fields are required");
+    }
+
+    const thumbnailLocalPath = req.file?.path
+    const existingVideo = await Video.findById(videoId)
+    const existingThumbnail = existingVideo.thumbnail 
+
+    // upload
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath) 
+
+    if(!thumbnail.url){
+        throw new ApiError(400, "Error while uploading thumbnail")
+    }
+
+    // Delete existing thumbnail
+    await deleteImageFromCloudinary(existingThumbnail)
+
+    const video = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set: {
+                title,
+                description,
+                thumbnail: thumbnail.url
+            }
+        },
+        { new: true}
+    )
+
+    if(!video){
+        throw new ApiError(404, "Error updating video details")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        video,
+        "Video details updated successfully"
+    ))
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
