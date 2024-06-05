@@ -29,17 +29,25 @@ const uploadOnCloudinary = async (localFilePath)=>{
 const deleteImageFromCloudinary = async (publicUrl) => {
     try {
       const publicId = publicUrl.split(".")[2].split("/").slice(5).join("/");
-      try {
-        const result = await cloudinary.api.delete_resources(publicId);
-        return result;
-      } catch (error) {
-        console.log(`Error 1 while deleting files ${error}`);
-        return null;
-      }
+
+      const result = await cloudinary.api.delete_resources(publicId);
+      return result;
     } catch (error) {
-      console.log(`Error 2 while deleting files ${error}`);
+      console.log(`Error while deleting image file ${error}`);
       return null;
     }
-  };
+};
 
-export { uploadOnCloudinary, deleteImageFromCloudinary }
+const deleteVideoFromCloudinary = async (publicUrl) => {
+  try {
+    const publicId = publicUrl.split(".")[2].split("/").slice(5).join("/");
+
+    const result = await cloudinary.api.delete_resources(publicId, { resource_type: "video" });
+    return result;
+  } catch (error) {
+    console.log(`Error while deleting video file ${error}`)
+    return null;
+  }
+}
+
+export { uploadOnCloudinary, deleteImageFromCloudinary, deleteVideoFromCloudinary }

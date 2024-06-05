@@ -4,7 +4,7 @@ import {User} from "../models/user.model.js"
 import {ApiError} from "../utils/apiError.js"
 import {ApiResponse} from "../utils/apiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
-import {deleteImageFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
+import {deleteImageFromCloudinary, deleteVideoFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -18,7 +18,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     // get file path
     const videoLocalPath = req.files?.videoFile[0]?.path
-    const thumbnailLocalPath = req.files?.thumbnail[0].path
+    const thumbnailLocalPath = req.files?.thumbnail[0]?.path
     // console.log("Video Path: ",videoLocalPath," Thumbnail Path: ", thumbnailLocalPath)
     if(!title || !description || !videoLocalPath || !thumbnailLocalPath){
         throw new ApiError(400, "Title, Description, VideoFile and Thumbnail are required")
@@ -167,7 +167,7 @@ const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
 
-    if(!mongoose.isValidObjectId(videoId)){
+    if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video Id")
     }
 
@@ -219,6 +219,40 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
+
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid Video Id")
+    }
+
+    // Find the video by id
+    const existingVideo = await Video.findById(videoId)
+
+    if(!existingVideo){
+        throw new ApiError(404, "Unable to find the video with given id")
+    }
+
+    // Delete from db
+    const deleteFromDb = await Video.findByIdAndDelete(existingVideo)
+
+    if(!deleteFromDb){
+        throw new ApiError(400, "Unable to delete video")
+    }
+    
+    // Delete video and thumbnail from cloudinary
+    const cloudinaryVideo = await deleteVideoFromCloudinary(existingVideo.videoFile)
+    const cloudinaryThumbnail = await deleteImageFromCloudinary(existingVideo.thumbnail)
+
+    if(!cloudinaryVideo){
+        throw new ApiError(500, "Unable to delete video from cloudinary")
+    }
+
+    if(!cloudinaryThumbnail){
+        throw new ApiError(500, "Unable to delete thumbnail from cloudinary")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Video deleted successfully"))
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
