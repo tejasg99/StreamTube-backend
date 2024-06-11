@@ -80,7 +80,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const {tweetId} = req.params
     //TODO: toggle like on tweet
-    if(!isValidObjectId(videoId)){
+    if(!isValidObjectId(tweetId)){
         throw new ApiError(400, "Invalid tweet Id")
     }
 
@@ -95,7 +95,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         await Like.findByIdAndDelete(alreadyLiked._id);
         return res 
         .status(200)
-        .json(new ApiResponse(200, { isliked: false }, "tweet unliked successfully"))
+        .json(new ApiResponse(200, { isLiked: false }, "tweet unliked successfully"))
     }
 
     // like
@@ -110,7 +110,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
     return res
     .status(200)
-    .json(new ApiResponse(200, { isliked: true }, "tweet liked successfully"))
+    .json(new ApiResponse(200, { isLiked: true }, "tweet liked successfully"))
 }
 )
 
@@ -175,7 +175,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
                     ownerDetails: {
                         username: 1,
                         fullname: 1,
-                        "avatar.url": 1,
+                        avatar: 1,
                     }
                 }
             }
@@ -184,7 +184,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
 
     return res
     .status(200)
-    .json(new ApiResponse(200, likedVideos, "All the videos fetched successfully"))
+    .json(new ApiResponse(200, likedVideos, "All liked videos fetched successfully"))
 })
 
 export {

@@ -58,7 +58,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
                     {
                         $project: {
                             username: 1,
-                            "avatar.url": 1,
+                            avatar: 1,
                         }
                     }
                 ],
@@ -90,12 +90,17 @@ const getUserTweets = asyncHandler(async (req, res) => {
                 isLiked: {
                     $cond: {
                         if: {
-                            $in: [userId, "$ownerDetails.likedBy"],
+                            $in: [req.user?._id, "$likeDetails.likedBy"],   //if userId is there in likeDetails.likedBy
                         },
                         then: true,
                         else: false,
                     },
                 },
+            },
+        },
+        {
+            $sort: {
+              createdAt: -1,
             },
         },
         {
@@ -121,7 +126,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
 const updateTweet = asyncHandler(async (req, res) => {
     //TODO: update tweet
     const { tweetId } = req.params;
-    const { content } = req.body
+    const { content } = req.body;
 
     if(!content){
         throw new ApiError(400, "Tweet content is required")   
@@ -151,13 +156,13 @@ const updateTweet = asyncHandler(async (req, res) => {
         { new: true }
     )
 
-    if(!updateTweet){
+    if(!updatedTweet){
         throw new ApiError(500, "Failed to update the tweet")
     }
 
     return res
     .status(200)
-    .json(new ApiResponse(200, updateTweet, "Tweet updated successfully"))
+    .json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"))
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
