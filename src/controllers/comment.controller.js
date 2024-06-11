@@ -9,6 +9,91 @@ const getVideoComments = asyncHandler(async (req, res) => {
     const {videoId} = req.params
     const {page = 1, limit = 10} = req.query
 
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid video id")
+    }
+
+    const videoComments = await Comment.aggregate([
+        {
+            $match: {
+                video: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "comment",
+                as: "likeDetails",
+            }
+        },
+        {
+            $addFields: {
+                likesCount: {
+                    $size: "$likeDetails"
+                },
+                ownerDetails: {
+                    $first: "$ownerDetails"
+                },
+                isLiked: {
+                    $cond: {
+                        if: {
+                            $in: [req.user?._id, "$likeDetails.likedBy"]
+                        },
+                        then: true,
+                        else: false,
+                    },
+                },
+            }
+        },
+        {
+            $sort: {
+                createdAt: -1, 
+            }
+        },
+        {
+            $project: {
+                content: 1,
+                createdAt: 1,
+                likesCount: 1,
+                ownerDetails: {
+                    username: 1,
+                    fullname: 1,
+                    avatar: 1,
+                },
+                isLiked: 1,
+            }
+        }
+    ])
+
+    // likesCount, ownerDetails and isLiked not working correctly 
+
+    if(!videoComments){
+        throw new ApiError(500, "Failed to fetch video comments")
+    }
+
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+    }
+
+    const comments = await Comment.aggregatePaginate(videoComments, options)
+
+    if(!comments){
+        throw new ApiError(500, "Failed to load paginated comments")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, comments, "Video Comments fetched successfully"))
 })
 
 const addComment = asyncHandler(async (req, res) => {
