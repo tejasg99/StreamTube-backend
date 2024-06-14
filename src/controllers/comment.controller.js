@@ -28,6 +28,9 @@ const getVideoComments = asyncHandler(async (req, res) => {
             }
         },
         {
+            $unwind: "$ownerDetails",
+        },
+        {
             $lookup: {
                 from: "likes",
                 localField: "_id",
@@ -40,9 +43,9 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 likesCount: {
                     $size: "$likeDetails"
                 },
-                ownerDetails: {
-                    $first: "$ownerDetails"
-                },
+                // ownerDetails: {
+                //     $first: "$ownerDetails"
+                // },
                 isLiked: {
                     $cond: {
                         if: {
