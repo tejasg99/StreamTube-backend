@@ -9,7 +9,6 @@ import {deleteImageFromCloudinary, deleteVideoFromCloudinary, uploadOnCloudinary
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
     
     if (!userId){
         throw new ApiError(400, "User Id not provided")
@@ -102,7 +101,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description} = req.body
-    // TODO: get video, upload to cloudinary, create video
 
     // get file path
     const videoLocalPath = req.files?.videoFile[0]?.path
@@ -134,7 +132,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: get video by id
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video Id")
     }
@@ -253,7 +250,6 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: update video details like title, description, thumbnail
 
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video Id")
@@ -306,7 +302,6 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: delete video
 
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video Id")
