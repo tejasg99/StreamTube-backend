@@ -5,9 +5,8 @@ import {ApiResponse} from "../utils/apiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 
 const getVideoComments = asyncHandler(async (req, res) => {
-    //TODO: get all comments for a video
-    const {videoId} = req.params
-    const {page = 1, limit = 10} = req.query
+    const { videoId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
 
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid video id")
@@ -25,10 +24,16 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 localField: "owner",
                 foreignField: "_id",
                 as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullname: 1,
+                            avatar: 1,
+                        }
+                    }
+                ]
             }
-        },
-        {
-            $unwind: "$ownerDetails",
         },
         {
             $lookup: {
@@ -36,20 +41,27 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 localField: "_id",
                 foreignField: "comment",
                 as: "likeDetails",
-            }
+                pipeline: [
+                    {
+                        $project: {
+                            likedBy: 1,
+                        }
+                    }
+                ],
+            },
         },
         {
             $addFields: {
                 likesCount: {
-                    $size: "$likeDetails"
+                    $size: "$likeDetails",
                 },
-                // ownerDetails: {
-                //     $first: "$ownerDetails"
-                // },
+                ownerDetails: {
+                    $first: "$ownerDetails"
+                },
                 isLiked: {
                     $cond: {
                         if: {
-                            $in: [req.user?._id, "$likeDetails.likedBy"]
+                            $in: [req.user?._id, "$likeDetails.likedBy"],  
                         },
                         then: true,
                         else: false,
@@ -67,17 +79,12 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 content: 1,
                 createdAt: 1,
                 likesCount: 1,
-                ownerDetails: {
-                    username: 1,
-                    fullname: 1,
-                    avatar: 1,
-                },
+                ownerDetails: 1,
                 isLiked: 1,
             }
-        }
+        },
     ])
 
-    // likesCount, ownerDetails and isLiked not working correctly 
 
     if(!videoComments){
         throw new ApiError(500, "Failed to fetch video comments")
@@ -100,7 +107,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
 })
 
 const addComment = asyncHandler(async (req, res) => {
-    // TODO: add a comment to a video
     const { videoId } = req.params;
     const { content } = req.body;
 
@@ -128,7 +134,6 @@ const addComment = asyncHandler(async (req, res) => {
 })
 
 const updateComment = asyncHandler(async (req, res) => {
-    // TODO: update a comment
     const { commentId } = req.params;
     const { content } = req.body;
 
@@ -166,7 +171,6 @@ const updateComment = asyncHandler(async (req, res) => {
 })
 
 const deleteComment = asyncHandler(async (req, res) => {
-    // TODO: delete a comment
     const { commentId } = req.params;
 
     if(!isValidObjectId(commentId)){
