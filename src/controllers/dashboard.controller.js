@@ -14,6 +14,52 @@ const getChannelStats = asyncHandler(async (req, res) => {
     if(!isValidObjectId(channelId)){
         throw new ApiError(400, "Invalid channel id")
     }
+
+    const stats = await Video.aggregate([
+        {
+            $match: {
+                owner: new mongoose.Types.ObjectId(channelId)
+            },
+        },
+        {
+            $group: {
+                _id: "$owner",
+                totalViews: { $sum: "$views" },
+                totalVideos: { $sum: 1 },
+                videoIds: { $push: "$_id" },
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                totalViews: 1,
+                totalVideos: 1,
+            }
+        }
+    ])
+
+    const totalSubscribers = await Subscription.countDocuments({
+        channel: channelId
+    })
+
+    const totalLikes = await Like.countDocuments({
+        video: { $in: await Video.find({ owner: channelId}).select("_id") }
+    })
+
+    const finalStats = {
+        totalVideos: stats[0].totalVideos || 0,
+        totalSubscribers,
+        totalLikes,
+        totalViews: stats[0].totalViews || 0,
+    }
+
+    if(!finalStats){
+        throw new ApiError(500, "Unable to fetch final stats")
+    }
+
+    res
+    .status(200)
+    .json(new ApiResponse(200, finalStats, "Channel stats fetched successfully"))
 })
 
 const getChannelVideos = asyncHandler(async (req, res) => {
