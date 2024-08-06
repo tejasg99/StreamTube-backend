@@ -192,6 +192,14 @@ const getVideoById = asyncHandler(async (req, res) => {
                 ]
             }
         },
+        { //Comment count only
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "video",
+              as: "comments"
+            }
+        },
         {
             $addFields: {
                 likesCount: {
@@ -207,6 +215,9 @@ const getVideoById = asyncHandler(async (req, res) => {
                         else: false,
                     }
                 },
+                commentsCount: {
+                    $size: "$comments"
+                }
             },
         },
         {
@@ -217,7 +228,7 @@ const getVideoById = asyncHandler(async (req, res) => {
                 views: 1,
                 createdAt: 1,
                 duration: 1,
-                comments: 1,
+                commentsCount: 1,
                 owner: 1,
                 likesCount: 1,
                 isLiked: 1,
