@@ -57,7 +57,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Unable to fetch final stats")
     }
 
-    res
+    return res
     .status(200)
     .json(new ApiResponse(200, finalStats, "Channel stats fetched successfully"))
 })
@@ -65,24 +65,28 @@ const getChannelStats = asyncHandler(async (req, res) => {
 const getChannelVideos = asyncHandler(async (req, res) => {
     // TODO: Get all the videos uploaded by the channel
 
-    const {channelId} = req.params;
-
-    if(!isValidObjectId(channelId)){
-        throw new ApiError(400, "Invalid channel id")
+    const { channelId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+  
+    if (!isValidObjectId(channelId)) {
+      throw new ApiError(400, "Invalid channel id");
     }
-
-    const videos = await Video.find(
-        {
-            owner: channelId
-        }
-    )
-    if(!videos){
-        throw new ApiError(500, "Unable to find videos ")
+  
+    const options = {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      sort: { createdAt: -1 }, // Optional: Sort videos by creation date, newest first
+    };
+  
+    const videos = await Video.paginate({ owner: channelId }, options);
+  
+    if (!videos) {
+      throw new ApiError(404, "No videos found for this channel");
     }
-
-    res
-    .status(200)
-    .json(new ApiResponse(200, videos, "Channel videos fetched successfully"))
+  
+    return res
+      .status(200)
+      .json(new ApiResponse(200, videos, "Channel videos fetched successfully"));
 })
 
 export {
