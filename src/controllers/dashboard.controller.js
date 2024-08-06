@@ -70,6 +70,19 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     if(!isValidObjectId(channelId)){
         throw new ApiError(400, "Invalid channel id")
     }
+
+    const videos = await Video.find(
+        {
+            owner: channelId
+        }
+    )
+    if(!videos){
+        throw new ApiError(500, "Unable to find videos ")
+    }
+
+    res
+    .status(200)
+    .json(new ApiResponse(200, videos, "Channel videos fetched successfully"))
 })
 
 export {
