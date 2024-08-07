@@ -31,7 +31,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const {userId} = req.params
 
-    if(!userId){
+    if(!isValidObjectId(userId)){
         throw new ApiError(400, "UserId is required")
     }
     //TODO: get user playlists
@@ -93,7 +93,66 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
 const getPlaylistById = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
+
+    if(!isValidObjectId(playlistId)){
+        throw new ApiError(400, "Invalid playlist id")
+    }
     //TODO: get playlist by id
+
+    const playlist = await Playlist.aggregate([
+        {
+            $match: {
+              _id: new mongoose.Types.ObjectId(playlistId),
+            }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "owner",
+            foreignField: "_id",
+            as: "owner",
+            pipeline: [
+              {
+                $project: {
+                  username: 1,
+                  fullname: 1,
+                  avatar: 1,
+                }
+              }
+            ]
+          }
+        },
+        {
+            $addFields: {
+              playlistBy: {
+                $first: "$owner"
+              }
+            }
+        },
+        {
+            $sort: {
+              createdAt: -1,
+            }
+        },
+        {
+            $project: {
+              name: 1,
+              description: 1,
+              playlistBy: 1,
+              videos: 1,
+              createdAt: 1,
+              updatedAt: 1
+            }
+        }
+    ])
+
+    if(!playlist){
+        throw new ApiError(500, "Failed to fetch playlist by id")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, playlist, "Playlist fetched successfully"))
 })
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
