@@ -87,6 +87,13 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Unable to fetch user playlists")
     }
 
+    // Incase user has not created any playlists
+    if (userPlaylists.length === 0) {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, [], "User has not created any playlists"));
+    }
+
     return res
     .status(200)
     .json(new ApiResponse(200, userPlaylists, "User playlists fetched successfully"))
