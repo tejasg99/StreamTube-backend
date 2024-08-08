@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose, {isValidObjectId } from "mongoose"
 import {Video} from "../models/video.model.js"
 import {Subscription} from "../models/subscription.model.js"
 import {Like} from "../models/like.model.js"
@@ -13,6 +13,11 @@ const getChannelStats = asyncHandler(async (req, res) => {
 
     if(!isValidObjectId(channelId)){
         throw new ApiError(400, "Invalid channel id")
+    }
+
+    // Only channel Owner should be able to access
+    if(channelId.toString() !== req.user?._id.toString()){
+        throw new ApiError(400, "Only channel owner can access the dashboard")
     }
 
     const stats = await Video.aggregate([
@@ -47,10 +52,10 @@ const getChannelStats = asyncHandler(async (req, res) => {
     })
 
     const finalStats = {
-        totalVideos: stats[0].totalVideos || 0,
+        totalVideos: stats[0]?.totalVideos || 0,
         totalSubscribers,
         totalLikes,
-        totalViews: stats[0].totalViews || 0,
+        totalViews: stats[0]?.totalViews || 0,
     }
 
     if(!finalStats){
@@ -71,14 +76,27 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     if (!isValidObjectId(channelId)) {
       throw new ApiError(400, "Invalid channel id");
     }
-  
+
+    // Only channel Owner should be able to access
+    if(channelId.toString() !== req.user?._id.toString()){
+        throw new ApiError(400, "Only channel owner can access the dashboard")
+    }
+
     const options = {
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
-      sort: { createdAt: -1 }, // Optional: Sort videos by creation date, newest first
     };
-  
-    const videos = await Video.paginate({ owner: channelId }, options);
+    
+    const aggregate = Video.aggregate([
+      { 
+        $match: { 
+            owner: new mongoose.Types.ObjectId(channelId) 
+        } 
+      },
+      { $sort: { createdAt: -1 } } // Optional: Sort videos by creation date, newest first
+    ]);
+
+    const videos = await Video.aggregatePaginate(aggregate, options);
   
     if (!videos) {
       throw new ApiError(404, "No videos found for this channel");
