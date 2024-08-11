@@ -1,2 +1,1 @@
-# videoTube project 
-Backend develeopment project for videoTube - a video streaming platform
+## Backend for StreamTube - video streaming platform
