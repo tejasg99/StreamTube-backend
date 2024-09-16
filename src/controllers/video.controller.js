@@ -381,11 +381,65 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "Published status toggled successfully"))
 })
 
+const getNextVideos = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    if(!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid videoId")
+    }
+
+    const video = await Video.findById(videoId);
+
+    if(!video) {
+        throw new ApiError(404, "Video not found")
+    }
+
+    const nextVideos = await Video.aggregate([
+        {
+            $match: {
+                _id: {
+                    $ne: new mongoose.Types.ObjectId(videoId), //excludes the current video
+                },
+                isPublished: true, //matches only published videos
+            },
+        },
+        {
+            $sample: {
+                size: 10, //randomly selects 10 vidoes from the input(match stage)
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner", //in video document
+                foreignField: "_id", //in users
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            avatar: 1,
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            $unwind: "ownerDetails",
+        }
+    ]);
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, nextVideos, "Next videos fetched successfully"));
+});
+
 export {
     getAllVideos,
     publishAVideo,
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    getNextVideos,
 }
