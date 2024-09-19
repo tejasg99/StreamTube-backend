@@ -190,9 +190,100 @@ const deleteTweet = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, deleteTweet, "Tweet deletion successful"))
 })
 
+const getAllTweets = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    const isGuest = req.query.guest === "true";
+
+    const aggregationPipeline = [
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            avatar: 1,
+                        }
+                    }
+                ]
+            },
+        },
+        {
+            $lookup: {
+              from: "likes",
+              localField: "_id",
+              foreignField: "tweet",
+              as: "likeDetails",
+              pipeline: [
+                {
+                  $project: {
+                    likedBy: 1,
+                  },
+                },
+              ],
+            },
+        },
+        {
+            $addFields: {
+                likesCount: {
+                    $size: "$likeDetails",
+                },
+                ownerDetails: {
+                    $first: "$ownerDetails",
+                },
+                isLiked: {
+                    $cond: {
+                        if: isGuest,
+                        then: false,
+                        else: {
+                            $cond : {
+                                if: { $in: [req.user?._id, "$likeDetails.likedBy"] },
+                                then: true,
+                                else: false,
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $sort: {
+                createdAt: -1,
+            }
+        },
+        {
+            $project: {
+                content: 1,
+                ownerDetails: 1,
+                likesCount: 1,
+                createdAt: 1,
+                isLiked: 1,
+            }
+        },
+    ]
+
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+    };
+
+    const tweets = await Tweet.aggregatePaginate(
+        Tweet.aggregate(aggregationPipeline),
+        options
+    )
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, tweets, "All Tweets fetched successfully"))
+})
+
 export {
     createTweet,
     getUserTweets,
     updateTweet,
-    deleteTweet
+    deleteTweet,
+    getAllTweets,
 }

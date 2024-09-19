@@ -107,7 +107,78 @@ const getChannelVideos = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, videos, "Channel videos fetched successfully"));
 })
 
+const getChannelInfo = asyncHandler(async (req, res) => {
+    try {
+      const userId = req.user._id;
+  
+      const channelAbouts = await User.aggregate([
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(userId),
+          },
+        },
+        {
+          $lookup: {
+            from: "videos",
+            localField: "_id",
+            foreignField: "owner",
+            as: "videos",
+          },
+        },
+        {
+          $lookup: {
+            from: "tweets",
+            localField: "_id",
+            foreignField: "owner",
+            as: "tweets",
+          },
+        },
+        {
+          $lookup: {
+            from: "likes",
+            localField: "_id",
+            foreignField: "video",
+            as: "videoLikes",
+          },
+        },
+        {
+          $project: {
+            username: 1,
+            fullname: 1,
+            email: 1,
+            description: 1,
+            createdAt: 1,
+            totalVideos: { $size: "$videos" },
+            totalTweets: { $size: "$tweets" },
+            totalLikes: { $size: "$videoLikes" },
+            totalViews: { $sum: "$videos.views" },
+          },
+        },
+      ]);
+  
+      if (!channelAbouts || channelAbouts.length === 0) {
+        throw new ApiError(404, "Channel information not found");
+      }
+  
+      const channelInfo = channelAbouts[0];
+  
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            channelInfo,
+            "Channel information fetched successfully"
+          )
+        );
+    } catch (error) {
+      console.error("Error in getChannelInfo:", error);
+      throw new ApiError(500, "Error fetching channel information", error);
+    }
+});
+
 export {
     getChannelStats, 
-    getChannelVideos
+    getChannelVideos,
+    getChannelInfo,
 }
