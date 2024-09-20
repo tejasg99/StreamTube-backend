@@ -137,51 +137,63 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
                 from: "users",
                 localField: "channel",
                 foreignField: "_id",
-                as: "channelDetails",
+                as: "subscribedChannel",
                 pipeline: [
                     {
                         $lookup: {
-                            from: "subscriptions",
-                            localField: "_id",
-                            foreignField: "channel",
-                            as: "subscribers"
-                        }
+                          from: "videos",
+                          localField: "_id",
+                          foreignField: "owner",
+                          as: "videos",
+                          pipeline: [
+                            {
+                              $match: {
+                                isPublished: true
+                              }
+                            },
+                            {
+                              $sort: { createdAt: -1 }
+                            },
+                            {
+                              $limit: 1
+                            }
+                          ]
+                        },
                     },
                     {
                         $addFields: {
-                            subscribersCount: {
-                                $size: "$subscribers",
+                            latestVideo: {
+                                $arrayElemAt: ["$videos", 0]
                             },
-                            isSubscribed: {
-                                $cond: {
-                                    if: {
-                                        $in: [subscriberId, "$subscribers.subscriber"]
-                                    },
-                                    then: true,
-                                    else: false,
-                                }
-                            }
                         }
                     },
-                    {
-                        $project: {
-                            username: 1,
-                            fullname: 1,
-                            avatar: 1,
-                            subscribersCount: 1,
-                            isSubscribed: 1,
-                        }
-                    }
                 ]
             }
         },
         {
-            $unwind: "$channelDetails",
+            $unwind: "$subscribedChannel",
         },
         {
             $project: {
                 _id: 0,
-                channelDetails: 1,
+                subscribedChannel: {
+                    _id: 1,
+                    username: 1,
+                    fullname: 1,
+                    avatar: 1,
+                    latestVideo: {
+                        _id: 1,
+                        video: 1,
+                        thumbnail:1,
+                        owner: 1,
+                        title: 1,
+                        description: 1,
+                        duration: 1,
+                        createdAt: 1,
+                        views: 1,
+                        ownerDetails: 1,
+                    }
+                },
             }
         }
     ])
