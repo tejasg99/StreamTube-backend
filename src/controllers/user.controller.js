@@ -415,6 +415,33 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, channel[0], "User channel fetched successfully"))
 })
 
+const updateChannelDescription = asyncHandler(async (req, res) => {
+    const { description } = req.body;
+    if(!description) {
+        throw new ApiError(400, "Description is required");
+    }
+
+    try {
+        const updatedDesc = await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $set: {
+                    description,
+                }
+            },
+            {
+                new: true,
+            }
+        ).select("-password -refreshToken");
+
+        return res
+        .status(200)
+        .json(new ApiResponse(200, updatedDesc, "Channel Description updated successfully"))
+    } catch (error) {
+        throw new ApiError(501, "Failed to update channel description")
+    }
+})
+
 const getWatchHistory = asyncHandler(async(req,res) => {
     const user = await User.aggregate([
         {
@@ -501,4 +528,5 @@ export {
     getUserChannelProfile,
     getWatchHistory,
     clearWatchHistory,
+    updateChannelDescription,
 }
