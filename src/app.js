@@ -4,18 +4,34 @@ import cookieParser from "cookie-parser"
 
 const app = express()
 
+const allowedOrigins = [
+    // production origin to be added here
+    "http://localhost:5173",
+]
+
+console.log("Allowed origins: ", allowedOrigins);
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true
-}))
+    origin: (origin, callback)=> {
+        if(!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error("Unauthorized request: not allowed by CORS"));
+        }
+    },
+    credentials: true,
+}));
 
 // Configurations to handle requests
 // Middlewares
-app.use(express.json({limit: "16kb"}))
-app.use(express.urlencoded({extended: true, limit: "16kb"}))
+app.use(express.json({limit: "50mb"}))
+app.use(express.urlencoded({extended: true, limit: "50mb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
-
+app.use((req, res, next) => {
+    res.setHeader("Content-Type", "application/json");
+    next();
+});
 // Routes import
 import userRouter from "./routes/user.routes.js"
 import healthcheckRouter from "./routes/healthcheck.routes.js"
