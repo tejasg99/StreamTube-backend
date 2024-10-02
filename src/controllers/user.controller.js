@@ -94,9 +94,9 @@ const registerUser = asyncHandler( async (req, res) => {
 })
 
 const loginUser = asyncHandler( async (req, res) => {
-    const {email, username, password} = req.body;
+    const {usernameOrEmail , password} = req.body;
 
-    if(!username && !email) {
+    if(!usernameOrEmail) {
         throw new ApiError(400, "username or email is required")
     }
     //Alternative
@@ -106,12 +106,12 @@ const loginUser = asyncHandler( async (req, res) => {
 
     // find user in db
     const user = await User.findOne({
-        // mongoDB operator 
-        $or: [{username}, {email}]
+        // mongoDB operator to match either by username or email
+        $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
     })
 
     if(!user){
-        throw new ApiError(404, "User does not exist")
+        throw new ApiError(404, "User not found")
     }
 
     // password check

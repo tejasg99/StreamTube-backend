@@ -12,16 +12,16 @@ const allowedOrigins = [
 console.log("Allowed origins: ", allowedOrigins);
 
 app.use(cors({
-    origin: (origin, callback)=> {
-        if(!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error("Unauthorized request: not allowed by CORS"));
-        }
-    },
+    // origin: (origin, callback)=> {
+    //     if(!origin || allowedOrigins.indexOf(origin) !== -1) {
+    //         callback(null, true);
+    //     } else {
+    //         callback(new Error("Unauthorized request: not allowed by CORS"));
+    //     }
+    // },
 
-    // origin: "http://localhost:5173", // Allow requests from this specific origin
-    // credentials: true,               // Allow credentials (cookies, authorization headers)
+    origin: "http://localhost:5173", // Allow requests from this specific origin
+    credentials: true,               // Allow credentials (cookies, authorization headers)
 }));
 
 // Configurations to handle requests

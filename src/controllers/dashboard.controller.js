@@ -93,7 +93,38 @@ const getChannelVideos = asyncHandler(async (req, res) => {
             owner: new mongoose.Types.ObjectId(channelId) 
         } 
       },
-      { $sort: { createdAt: -1 } } // Optional: Sort videos by creation date, newest first
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "video",
+          as: "likes"
+        }
+      },
+      {
+        $addFields: {
+          likesCount: {
+            $size: "$likes",
+          },
+        }
+      },
+      {
+        $sort: {
+          createdAt: 1,
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          videoFile: 1,
+          thumbnail: 1,
+          likesCount: 1,
+          title: 1,
+          description: 1,
+          createdAt: 1,
+          isPublished: 1,
+        }
+      }
     ]);
 
     const videos = await Video.aggregatePaginate(aggregate, options);
