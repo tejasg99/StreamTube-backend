@@ -61,7 +61,21 @@ const getAllVideos = asyncHandler(async (req, res) => {
         })
     }
 
-    pipeline.push(
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+    }
+
+    const videoAggregate = await Video.aggregate(pipeline);
+    const video = await Video.aggregatePaginate(videoAggregate, options)
+
+    //To add ownerDetails after pagination
+    const populatedVideos = await Video.aggregate([
+        {
+            $match: {
+                _id: { $in: video.docs.map((v) => v._id) }, //Only for paginated results
+            }
+        },
         {
             $lookup: {
                 from: "users",
@@ -81,20 +95,17 @@ const getAllVideos = asyncHandler(async (req, res) => {
         {
         $unwind: "$ownerDetails",
         },
-    )
+    ]);
 
-    const videoAggregate = await Video.aggregate(pipeline);
-
-    const options = {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-    }
-
-    const video = await Video.aggregatePaginate(videoAggregate, options)
+    //Merge ownerDetails into paginated result
+    const finalResult = {
+        ...video,
+        docs: populatedVideos,
+    };
 
     return res
     .status(200)
-    .json(new ApiResponse(200, video, "All videos fetched successfully"))
+    .json(new ApiResponse(200, finalResult, "All videos fetched successfully"))
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
