@@ -140,7 +140,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.params;
+
+    const isGuest = req.query.guest === "true";
+
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid Video Id")
     }
@@ -181,12 +184,18 @@ const getVideoById = asyncHandler(async (req, res) => {
                             },
                             isSubscribed: {
                                 $cond: {
-                                    if: {
-                                        $in: [req.user?._id, "$subscribers.subscriber"]
-                                    },
-                                    then: true,
-                                    else: false,
-                                },
+                                    if: isGuest,
+                                    then: false,
+                                    else: {
+                                        $cond: {
+                                            if: {
+                                                $in: [req.user?._id, "$subscribers.subscriber"]
+                                            },
+                                            then: true,
+                                            else: false,
+                                        },
+                                    }
+                                }
                             },
                         }
                     },
@@ -219,10 +228,16 @@ const getVideoById = asyncHandler(async (req, res) => {
                 },
                 isLiked: {
                     $cond: {
-                        if: { $in: [req.user?._id, "$likes.likedBy"]},
-                        then: true,
-                        else: false,
-                    }
+                        if: isGuest,
+                        then: false,
+                        else: {
+                            $cond: {
+                                if: { $in: [req.user?._id, "$likes.likedBy"]},
+                                then: true,
+                                else: false,
+                            }
+                        }
+                    },
                 },
                 commentsCount: {
                     $size: "$comments"
@@ -237,10 +252,13 @@ const getVideoById = asyncHandler(async (req, res) => {
                 views: 1,
                 createdAt: 1,
                 duration: 1,
+                comments: 1,
                 commentsCount: 1,
                 owner: 1,
                 likesCount: 1,
                 isLiked: 1,
+                isSubscribed: 1,
+                subscribersCount: 1,
             },
         },
     ])
@@ -434,9 +452,16 @@ const getNextVideos = asyncHandler(async (req, res) => {
             },
         },
         {
-            $unwind: "ownerDetails",
+            $unwind: "$ownerDetails",
         }
     ]);
+
+    // Check if nextVideos array is empty
+    if (nextVideos.length === 0) {
+        return res
+            .status(200)
+            .json(new ApiResponse(200, [], "No next videos found"));
+    }
 
     return res
     .status(200)
