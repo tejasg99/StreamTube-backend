@@ -252,7 +252,6 @@ const getVideoById = asyncHandler(async (req, res) => {
                 views: 1,
                 createdAt: 1,
                 duration: 1,
-                comments: 1,
                 commentsCount: 1,
                 owner: 1,
                 likesCount: 1,

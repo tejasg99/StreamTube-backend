@@ -8,6 +8,8 @@ const getVideoComments = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
+    const isGuest = req.query.guest === "true";
+
     if(!isValidObjectId(videoId)){
         throw new ApiError(400, "Invalid video id")
     }
@@ -56,15 +58,21 @@ const getVideoComments = asyncHandler(async (req, res) => {
                     $size: "$likeDetails",
                 },
                 ownerDetails: {
-                    $first: "$ownerDetails"
+                    $first: "$ownerDetails",
                 },
                 isLiked: {
                     $cond: {
-                        if: {
-                            $in: [req.user?._id, "$likeDetails.likedBy"],  
-                        },
-                        then: true,
-                        else: false,
+                        if: isGuest,
+                        then: false,
+                        else: {
+                            $cond: {
+                                if: {
+                                    $in: [req.user?._id, "$likeDetails.likedBy"],  
+                                },
+                                then: true,
+                                else: false,
+                            },
+                        }
                     },
                 },
             }
@@ -79,7 +87,11 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 content: 1,
                 createdAt: 1,
                 likesCount: 1,
-                ownerDetails: 1,
+                ownerDetails: {
+                    username: 1,
+                    fullname: 1,
+                    avatar: 1,
+                },
                 isLiked: 1,
             }
         },
