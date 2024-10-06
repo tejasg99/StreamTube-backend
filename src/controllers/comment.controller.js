@@ -14,7 +14,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video id")
     }
 
-    const videoComments = await Comment.aggregate([
+    const videoComments = [
         {
             $match: {
                 video: new mongoose.Types.ObjectId(videoId)
@@ -29,6 +29,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 pipeline: [
                     {
                         $project: {
+                            _id: 1,
                             username: 1,
                             fullname: 1,
                             avatar: 1,
@@ -36,6 +37,9 @@ const getVideoComments = asyncHandler(async (req, res) => {
                     }
                 ]
             }
+        },
+        {
+            $unwind: "$ownerDetails", //to flatten the ownerDetails array and fix the response
         },
         {
             $lookup: {
@@ -56,9 +60,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
             $addFields: {
                 likesCount: {
                     $size: "$likeDetails",
-                },
-                ownerDetails: {
-                    $first: "$ownerDetails",
                 },
                 isLiked: {
                     $cond: {
@@ -88,6 +89,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 createdAt: 1,
                 likesCount: 1,
                 ownerDetails: {
+                    _id: 1,
                     username: 1,
                     fullname: 1,
                     avatar: 1,
@@ -95,7 +97,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 isLiked: 1,
             }
         },
-    ])
+    ]
 
 
     if(!videoComments){
@@ -107,7 +109,10 @@ const getVideoComments = asyncHandler(async (req, res) => {
         limit: parseInt(limit, 10),
     }
 
-    const comments = await Comment.aggregatePaginate(videoComments, options)
+    const comments = await Comment.aggregatePaginate( 
+        Comment.aggregate(videoComments), 
+        options, 
+    )
 
     if(!comments){
         throw new ApiError(500, "Failed to load paginated comments")
