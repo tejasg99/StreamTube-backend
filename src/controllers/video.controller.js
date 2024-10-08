@@ -8,43 +8,47 @@ import {deleteImageFromCloudinary, deleteVideoFromCloudinary, uploadOnCloudinary
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    
-    if (userId){
-      if (!isValidObjectId(userId)) {
-       throw new ApiError(400, "Invalid User Id")
-      }
-    }
-
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+    // console.log("Query request for getAllVideos: ",req.query)
     const pipeline = [];
 
-    // Filter videos published by the user/owner 
-    if(userId){
-        pipeline.push({
-            $match: {
-                owner: new mongoose.Types.ObjectId(userId),
+    if(userId) {
+        if(!isValidObjectId(userId)){
+            throw new ApiError(400, "Invalid user Id");
+        }
+
+        pipeline.push(
+            {
+                $match: {
+                    owner: new mongoose.Types.ObjectId(userId),
+                    isPublished: true,
+                }
             }
-        })
+        );
+    } else {
+        pipeline.push(
+            {
+                $match: {
+                    isPublished: true,
+                }
+            }
+        )
     }
 
-    // Filter by query by title using regex
+    // console.log("Pipeline before sorting and pagination:", JSON.stringify(pipeline, null, 2));
+
+    // Filter by using search index in atlas
     if(query){
         pipeline.push({
-            $match: {
-                title: {
-                    $regex: query,
-                    $options: "i", //i for case insensitive search
-                },
+            $search: {
+              index: 'search-videos',
+              text: {
+                query: query,
+                path: ['title', 'description'],
+              },
             },
-        })
+          });
     }
-
-    // show only published videos
-    pipeline.push({
-        $match: {
-            isPublished: true,
-        }
-    })
 
     // Sort 1 - ascending, -1 - descending order
     if(sortBy && sortType){
@@ -52,28 +56,39 @@ const getAllVideos = asyncHandler(async (req, res) => {
             $sort: {
                 [sortBy]: sortType === "asc" ? 1 : -1,
             }
-        })
+        },)
     } else {
         pipeline.push({
             $sort: {
                 createdAt: -1,
             }
-        })
+        },)
     }
+
+    const videoAggregate = await Video.aggregate(pipeline);
 
     const options = {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10),
     }
 
-    const videoAggregate = await Video.aggregate(pipeline);
-    const video = await Video.aggregatePaginate(videoAggregate, options)
+    const videos = await Video.aggregatePaginate(videoAggregate, options)
+
+    // Pagination using $skip and $limit
+    // const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    // pipeline.push(
+    //     { $skip: skip },
+    //     { $limit: parseInt(limit, 10) }
+    // );
+
+    // Execute the aggregation
+    // const videos = await Video.aggregate(pipeline);
 
     //To add ownerDetails after pagination
     const populatedVideos = await Video.aggregate([
         {
             $match: {
-                _id: { $in: video.docs.map((v) => v._id) }, //Only for paginated results
+                _id: { $in: videos.docs.map((v) => v._id) }, //Only for paginated results
             }
         },
         {
@@ -97,9 +112,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },
     ]);
 
-    //Merge ownerDetails into paginated result
+    // Merge ownerDetails into paginated result
     const finalResult = {
-        ...video,
+        ...videos,
         docs: populatedVideos,
     };
 
