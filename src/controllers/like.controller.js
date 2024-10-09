@@ -132,7 +132,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
                 from: "videos",
                 localField: "video",
                 foreignField: "_id",
-                as: "likedVideos",
+                as: "likedVideo",
                 pipeline: [
                     {
                         $lookup: {
@@ -149,7 +149,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
             }
         },
         {
-            $unwind: "$likedVideos", //deconstruct and output a document for each liked video
+            $unwind: "$likedVideo", //deconstruct and output a document for each liked video
         },
         {
             $sort: {
@@ -159,10 +159,10 @@ const getLikedVideos = asyncHandler(async (req, res) => {
         {
             $project: {
                 _id: 0,
-                likedVideos: {
+                likedVideo: {
                     _id: 1,
-                    "videoFile.url": 1,
-                    "thumbnail.url": 1,
+                    videoFile: 1,
+                    thumbnail: 1,
                     owner: 1,
                     title: 1,
                     description: 1,

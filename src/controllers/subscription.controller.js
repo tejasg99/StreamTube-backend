@@ -60,7 +60,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
                 from: "users",
                 localField: "subscriber",
                 foreignField: "_id",
-                as: "subscriberDetails",
+                as: "subscriber",
                 pipeline: [
                     {
                         $lookup: {
@@ -75,7 +75,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
                             subscribedToSubscriber: {
                                 $cond: {
                                     if: {
-                                        $in: [channelId, "$subscribedToSubscriber.subscriber"]
+                                        $in: [req.user?._id, "$subscribedToSubscriber.subscriber"]
                                     },
                                     then: true,
                                     else: false,
@@ -90,12 +90,12 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
             }
         },
         {
-            $unwind: "$subscriberDetails",
+            $unwind: "$subscriber",
         },
         {
             $project: {
                 _id: 0,
-                subscriberDetails: {
+                subscriber: {
                     _id: 1,
                     username: 1,
                     fullname: 1,
@@ -183,7 +183,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
                     avatar: 1,
                     latestVideo: {
                         _id: 1,
-                        video: 1,
+                        videoFile: 1,
                         thumbnail:1,
                         owner: 1,
                         title: 1,
