@@ -28,19 +28,14 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
     const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
     
     if(!isValidObjectId(userId)){
         throw new ApiError(400, "Invalid user id")
     }
 
-    const user = await User.findById(userId)
-
-    if(!user){
-        throw new ApiError(400, "User not found")
-    }
-
     // aggregation pipeline to find all tweets and the associated data
-    const userTweets = await Tweet.aggregate([
+    const pipeline = [
         {
             $match: {
                 owner: new mongoose.Types.ObjectId(userId),
@@ -110,7 +105,17 @@ const getUserTweets = asyncHandler(async (req, res) => {
                 createdAt: 1,
             },
         },
-    ])
+    ]
+
+    const options = {
+        page: parseInt(page, 1),
+        limit: parseInt(limit, 10),
+    }
+
+    const userTweets = await Tweet.aggregatePaginate(
+        Tweet.aggregate(pipeline),
+        options
+    );
 
     if(!userTweets){
         throw new ApiError(500, "Failed to fetch all the user tweets");
