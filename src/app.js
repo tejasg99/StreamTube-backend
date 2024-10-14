@@ -1,6 +1,7 @@
-import express from "express"
-import cors from "cors"
-import cookieParser from "cookie-parser"
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import errorHandler from "./middlewares/errorHandler.middleware.js";
 
 const app = express()
 
@@ -32,9 +33,11 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 app.use((req, res, next) => {
-    res.setHeader("Content-Type", "application/json");
+    res.setHeader('Content-Type', 'application/json');
     next();
 });
+
+
 // Routes import
 import userRouter from "./routes/user.routes.js"
 import healthcheckRouter from "./routes/healthcheck.routes.js"
@@ -57,6 +60,9 @@ app.use("/api/v1/likes", likeRouter)
 app.use("/api/v1/playlist", playlistRouter)
 app.use("/api/v1/dashboard", dashboardRouter)
 
+// Error handler middleware to send json responses instead of html
+app.use(errorHandler);
+
 // http://localhost:8000/api/v1/users/register
 
-export { app } 
+export { app }
