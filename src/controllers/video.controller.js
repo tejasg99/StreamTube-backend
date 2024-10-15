@@ -35,8 +35,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
         )
     }
 
-    // console.log("Pipeline before sorting and pagination:", JSON.stringify(pipeline, null, 2));
-
     // Filter by using search index in atlas
     if(query){
         pipeline.push({
@@ -65,57 +63,44 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },)
     }
 
-    const videoAggregate = await Video.aggregate(pipeline);
-
     const options = {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10),
     }
 
+    const videoAggregate = await Video.aggregate(pipeline);
+
     const videos = await Video.aggregatePaginate(videoAggregate, options)
 
-    // Pagination using $skip and $limit
-    // const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    // pipeline.push(
-    //     { $skip: skip },
-    //     { $limit: parseInt(limit, 10) }
-    // );
-
-    // Execute the aggregation
-    // const videos = await Video.aggregate(pipeline);
-
     //To add ownerDetails after pagination
-    const populatedVideos = await Video.aggregate([
-        {
-            $match: {
-                _id: { $in: videos.docs.map((v) => v._id) }, //Only for paginated results
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "ownerDetails",
-                pipeline: [
-                    {
-                        $project: {
-                            username: 1,
-                            avatar: 1,
+    if(videos.docs.length > 0) {
+        pipeline.push(
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "ownerDetails",
+                    pipeline: [
+                        {
+                            $project: {
+                                username: 1,
+                                avatar: 1,
+                            }
                         }
-                    }
-                ]
+                    ]
+                },
             },
-        },
-        {
-        $unwind: "$ownerDetails",
-        },
-    ]);
+            {
+            $unwind: "$ownerDetails",
+            },
+        )
+    }
 
     // Merge ownerDetails into paginated result
     const finalResult = {
         ...videos,
-        docs: populatedVideos,
+        docs: await Video.aggregate(pipeline),
     };
 
     return res
