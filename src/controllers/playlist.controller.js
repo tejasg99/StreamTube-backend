@@ -107,7 +107,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     }
     //TODO: get playlist by id
 
-    const playlist = await Playlist.aggregate([
+    const playlistVideos = await Playlist.aggregate([
         {
             $match: {
               _id: new mongoose.Types.ObjectId(playlistId),
@@ -115,52 +115,128 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         },
         {
           $lookup: {
+            from: "videos",
+            localField: "videos",
+            foreignField: "_id",
+            as: "videos",
+          }
+        },
+        {
+          $match: {
+            "videos.isPublished": true,
+          }
+        },
+        {
+          $lookup: {
             from: "users",
             localField: "owner",
             foreignField: "_id",
             as: "owner",
-            pipeline: [
-              {
-                $project: {
-                  username: 1,
-                  fullname: 1,
-                  avatar: 1,
-                }
-              }
-            ]
           }
         },
         {
-            $addFields: {
-              playlistBy: {
-                $first: "$owner"
-              }
-            }
+          $lookup: {
+            from: "subscriptions",
+            let: { ownerId: { $arrayElemAt: ["$owner._id", 0] }},
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$channel", "$$ownerId"],
+                  }
+                }
+              },
+              {
+                $count: "subscriberCount",
+              },
+            ],
+            as: "subscriberInfo",
+          },
         },
         {
-            $sort: {
-              createdAt: -1,
-            }
+          $addFields: {
+            totalVideos: {
+              $size: "$videos",
+            },
+            totalDuration: {
+              $sum: "$videos.duration",
+            },
+            totalViews: {
+              $sum: "$videos.views",
+            },
+            owner: {
+              $mergeObjects: [
+                { $arrayElemAt: ["$owner", 0] },
+                {
+                  subscribers: {
+                    $ifNull: [
+                      { $arrayElemAt: ["$subscriberInfo.subscriberCount", 0] },
+                      0,
+                    ]
+                  }
+                }
+              ]
+            },
+            coverImage: {
+              $let: {
+                vars: {
+                  latestVideo: {
+                    $arrayElemAt: [
+                      {
+                        $sortArray: { input: "$videos", sortBy: { createdAt: -1 } },
+                      },
+                      0,
+                    ]
+                  }
+                },
+                in: "$$latestVideo.thumbnail",
+              },
+            },
+          },
         },
         {
             $project: {
               name: 1,
               description: 1,
-              playlistBy: 1,
-              videos: 1,
               createdAt: 1,
-              updatedAt: 1
+              updatedAt: 1,
+              totalVideos: 1,
+              totalViews: 1,
+              coverImage: 1,
+              videos: {
+                _id: 1,
+                videoFile: 1,
+                thumbnail: 1,
+                title: 1,
+                description: 1,
+                duration: 1,
+                createdAt: 1,
+                views: 1,
+              },
+              owner: {
+                username: 1,
+                fullname: 1,
+                avatar: 1,
+                _id: 1,
+                subscribers: 1,
+              }
             }
         }
     ])
+    
+    if(!playlistVideos) {
+      throw new ApiError(500, "Failed to fetch playlist")
+    }
 
-    if(!playlist){
-        throw new ApiError(500, "Failed to fetch playlist by id")
+    if(playlistVideos[0] === undefined){
+        return res
+        .status(200)
+        .json(new ApiResponse(200, [], "Playlist fetched successfully"))
     }
 
     return res
     .status(200)
-    .json(new ApiResponse(200, playlist, "Playlist fetched successfully"))
+    .json(new ApiResponse(200, playlistVideos, "Playlist fetched successfully"))
 })
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
