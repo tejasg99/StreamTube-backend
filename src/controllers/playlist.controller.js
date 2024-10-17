@@ -44,41 +44,49 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
           },
           {
             $lookup: {
-              from: "users",
-              localField: "owner",
+              from: "videos",
+              localField: "videos",
               foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    fullname: 1,
-                    avatar: 1,
-                  }
-                }
-              ]
+              as: "videos",
             }
           },
           {
             $addFields: {
-              playlistBy: {
-                $first: "$owner"
-              }
-            }
-          },
-          {
-            $sort: {
-              createdAt: -1,
-            }
+              totalVideos: {
+                $size: "$videos",
+              },
+              totalDuration: {
+                $sum: "$videos.duration",
+              },
+              totalViews: {
+                $sum: "$videos.views",
+              },
+              coverImage: {
+                $let: {
+                  vars: {
+                    latestVideo: {
+                      $arrayElemAt: [
+                        {
+                          $sortArray: { input: "$videos", sortBy: { createdAt: -1 } },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                  in: "$$latestVideo.thumbnail",
+                },
+              },
+            },
           },
           {
             $project: {
+              _id: 1,
               name: 1,
               description: 1,
-              playlistBy: 1,
-              videos: 1,
-              createdAt: 1,
-              updatedAt: 1
+              totalVideos: 1,
+              totalViews: 1,
+              updatedAt: 1,
+              coverImage: 1,
             }
           }
     ])
