@@ -8,6 +8,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
   try {
     // Check if the request is from a guest user
     if (req.query.guest === "true") {
+      console.log("Guest access granted");
       req.user = null; // Set req.user to null for guest users
       return next();
     }
