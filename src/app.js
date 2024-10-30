@@ -8,7 +8,7 @@ const app = express()
 const allowedOrigins = [
     // production origin to be added here
     // "http://localhost:5173",
-    "https://visitstreamtube.vercel.app/",
+    "https://visitstreamtube.vercel.app",
 ]
 
 console.log("Allowed origins: ", allowedOrigins);
