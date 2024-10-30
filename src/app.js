@@ -22,7 +22,7 @@ app.use(cors({
     //     }
     // },
 
-    origin: "http://localhost:5173", // Allow requests from this specific origin
+    origin: "https://visitstreamtube.vercel.app", // Allow requests from this specific origin
     credentials: true,               // Allow credentials (cookies, authorization headers)
 }));
 
