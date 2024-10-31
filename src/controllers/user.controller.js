@@ -128,15 +128,17 @@ const loginUser = asyncHandler( async (req, res) => {
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
     // cookies
-    const options = {
-        httpOnly: true,
-        secure: true
-    }
+    res.setHeader('Set-Cookie', [
+        `accessToken=${accessToken}; Max-Age=${
+          1 * 24 * 60 * 60
+        }; Path=/; HttpOnly; Secure; SameSite=None`,
+        `refreshToken=${refreshToken}; Max-Age=${
+          15 * 24 * 60 * 60
+        }; Path=/; HttpOnly; Secure; SameSite=None`,
+    ]);
 
     return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
     .json(
         new ApiResponse(
             200, //statusCode
@@ -164,14 +166,13 @@ const logoutUser = asyncHandler(async(req, res) => {
     )
     
     // clear cookies
-    const options = {
-        httpOnly: true,
-        secure: true
-    }
+    res.setHeader('Set-Cookie', [
+        'accessToken=; Max-Age=-1; Path=/; HttpOnly; Secure; SameSite=None',
+        'refreshToken=; Max-Age=-1; Path=/; HttpOnly; Secure; SameSite=None',
+    ]);
+
     return res
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged out successfully"))
 
 })
@@ -200,17 +201,19 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
             throw new ApiError(401, "Refresh Token is expired or used")
         }
     
-        const options = {
-            httpOnly: true,
-            secure: true
-        }
-    
         const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
-    
+        
+        res.setHeader('Set-Cookie', [
+            `accessToken=${accessToken}; Max-Age=${
+              1 * 24 * 60 * 60
+            }; Path=/; HttpOnly; Secure; SameSite=None`,
+            `refreshToken=${newRefreshToken}; Max-Age=${
+              15 * 24 * 60 * 60
+            }; Path=/; HttpOnly; Secure; SameSite=None`,
+        ]);
+
         return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
         .json(
             new ApiResponse(
                 200,
