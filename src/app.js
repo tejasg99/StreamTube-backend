@@ -14,14 +14,6 @@ const allowedOrigins = [
 console.log("Allowed origins: ", allowedOrigins);
 
 app.use(cors({
-    // origin: (origin, callback)=> {
-    //     if(!origin || allowedOrigins.indexOf(origin) !== -1) {
-    //         callback(null, true);
-    //     } else {
-    //         callback(new Error("Unauthorized request: not allowed by CORS"));
-    //     }
-    // },
-
     origin: "https://visitstreamtube.vercel.app", // Allow requests from this specific origin
     credentials: true,               // Allow credentials (cookies, authorization headers)
 }));

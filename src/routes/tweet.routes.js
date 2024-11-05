@@ -9,8 +9,6 @@ import {
 import {verifyJWT} from "../middlewares/auth.middleware.js"
 
 const router = Router();
-// router.use(verifyJWT); 
-
 router.route("/").post(verifyJWT, createTweet);
 router.route("/user/:userId").get(verifyJWT, getUserTweets);
 router

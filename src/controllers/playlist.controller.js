@@ -13,7 +13,6 @@ const createPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Playlist name and description are required")
     }
 
-    //TODO: create playlist
     const newPlaylist = await Playlist.create({
         name,
         description,
@@ -35,7 +34,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     if(!isValidObjectId(userId)){
         throw new ApiError(400, "UserId is required")
     }
-    //TODO: get user playlists
+
     const userPlaylists = await Playlist.aggregate([
         {
             $match: {
@@ -113,7 +112,6 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     if(!isValidObjectId(playlistId)){
         throw new ApiError(400, "Invalid playlist id")
     }
-    //TODO: get playlist by id
 
     const playlistVideos = await Playlist.aggregate([
         {
@@ -285,7 +283,6 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     const {playlistId, videoId} = req.params
-    // TODO: remove video from playlist
 
     if (!isValidObjectId(playlistId)) {
       throw new ApiError(400, "Invalid playlist ID");
@@ -322,7 +319,6 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
 const deletePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
-    // TODO: delete playlist
 
     if (!isValidObjectId(playlistId)) {
         throw new ApiError(400, "Invalid playlist ID");
@@ -350,7 +346,6 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 const updatePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     const {name, description} = req.body
-    //TODO: update playlist
 
     if (!isValidObjectId(playlistId)) {
         throw new ApiError(400, "Invalid playlist ID");

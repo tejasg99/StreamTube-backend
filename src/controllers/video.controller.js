@@ -9,7 +9,6 @@ import {deleteImageFromCloudinary, deleteVideoFromCloudinary, uploadOnCloudinary
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-    // console.log("Query request for getAllVideos: ",req.query)
     const pipeline = [];
 
     if(userId) {
@@ -114,7 +113,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     // get file path
     const videoLocalPath = req.files?.videoFile[0]?.path
     const thumbnailLocalPath = req.files?.thumbnail[0]?.path
-    // console.log("Video Path: ",videoLocalPath," Thumbnail Path: ", thumbnailLocalPath)
+    
     if(!title || !description || !videoLocalPath || !thumbnailLocalPath){
         throw new ApiError(400, "Title, Description, VideoFile and Thumbnail are required")
     }

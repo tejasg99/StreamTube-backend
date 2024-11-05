@@ -296,7 +296,7 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
         throw new ApiError(400, "Error while uploading avatar")
     }
 
-    // Todo delete old image after new uploaded
+    // delete old image after new uploaded
     await deleteImageFromCloudinary(existingAvatar)
 
     // update db

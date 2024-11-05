@@ -3,7 +3,7 @@ import { ApiError } from "../utils/apiError.js";
 // Error-handling middleware
 const errorHandler = (err, req, res, next) => {
     // Log the full error stack to the backend console
-    console.error(err.stack || err); // Log stack or error object
+    console.error(err.stack || err);
 
     // If the error is an instance of ApiError
     if (err instanceof ApiError) {
